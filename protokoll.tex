@@ -77,59 +77,11 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Lab1a}
+\include{lab1a}
 
-\subsection{Hinweise}
-\emph{Hinweise:}
-\begin{itemize}
-    \item Setzen sie alle Variablen nach \emph{FOR STUDENTS} in der .tex File
-    \item Ersetzen sie die Platzhalter für ihre Namen und MatNr.
-    \item Löschen sie diese Sektion über Hinweise und die folgenden Beispiel-Kapitel
-    \item Achten sie auf geforderte Formate und Anforderungen an die Dateinamen
-\end{itemize}
+\include{lab1b}
 
-\subsection{Zugang zu Tomcat}
-Den Zugang zum Tomcat-Server erhält man sehr leicht - zumindest unter Linux. Alle Arbeiten wurden unter Linux
-durchgeführt. Für den Zugang ist es notwendig, sich via SSH auf den ESSE-Server zu verbinden, allerdings mit Port Forwarding
-auf den angegebenen Tomcat-Server:\linebreak
-ssh -p 12345 MATRNR@sela.inso.tuwien.ac.at -L 2222:192.168.20.100:20\linebreak
-Dies hat zur Folge, dass der Port 2222 nun auf den Port des Tomcat-Servers geforwarded wird und es somit ein leichtes
-ist mittels http://localhost:2222 die Homepage auf dem Server einzusehen.
-
-\subsection{Walter's Private Key}
-Nun war es die Aufgabe sich einen SSH-Zugang mit dem User 'walter' zu verschaffen. Hierfür gibt es 2 Möglichkeiten, sich
-via SSH zu authentifizieren: 1) Plain-Text Passwort und 2) Private-Key und Public-Key Methode
-\linebreak
-Natürlich ist es sehr unwahrscheinlich, dass jemand sein Passwort als Plain-Text irgendwo auf einem Server abspeichert. Deshalb
-fokusieren wir uns im folgenden auf die 2. Möglichkeit.\linebreak
-Unter Linux-Systemen gibt es hierfür einen Ordner .ssh im Home-Verzeichnis des Users. Im Falle von David Mihola würde
-dieser unter /home/David/.ssh zu finden sein. Hier liegt nun eine Datei id\_rsa, die im Normalfall den Private Key
-des Users, der den SSH-Zugang anfordert beinhaltet.\linebreak
-Nun sollte es doch für 'walter' genauso sein. Das heißt wir suchen nach dem Ordner /home/walter/.ssh. Dieser ist aber
-natürlich am Server geschützt und kann nicht einfach durch eintippen in Plain-Text in die Adresse des Servers
-angesurft werden. Jedoch hat der hier verwendete Tomcat-Server eine Schwachstelle. Mittels Directory-Traversal kann
-der Server ausgetricktst werden und der Ordner eingesehen werden. Hier die Adresse der zu untersuchenden Datei:\linebreak
-http://localhost:2222/%c0%ae%c0%ae/%c0%ae%c0%ae/%c0%ae%c0%ae/%c0%ae%c0%ae/%c0%ae%c0%ae/home/walter/.ssh/id\_rsa
-\linebreak
-Directory-Traversal führt hier eine Umwandlung von Plain-Characters in Sonderzeichen ein, wodurch der Server nun die Datei auch
-anzeigt. Die Sonderzeichen sind spezielle URI-Zeichenfolgen, die vom Server in Plain-Text umgewandelt werden. Damit kann
-man etwaige Schutzmechanismen des Tomcat-Servers umgehen.
-
-\subsection{SSH-Zugang via User 'Walter'}
-Wie bekommt man nun einen SSH-Zugang mit einem fremden Private Key?
-Wie oben beschrieben, gibt es für jeden User den Ordner .ssh mit den Private Keys für SSH-Zugängen. Es muss nun
-möglich sein, sich einen Zugang zum User 'walter' zu verschaffen, indem man sich als dieser ausgibt. Dazu
-wird einfach im Ordner /home/David/.ssh eine Datei namens id\_rsa erstellt (falls diese noch nicht existiert). Danach wird
-der gefundene Schlüssel von 'walter' hineinkopiert und die Datei gespeichert. Nun ist es nocht notwendig mittels 'chmod
-600 id\_rsa' den Zugriffsschutz des Keys auf Permission 600 umzustellen. Andernfalls wird der Server die Verbindung
-verweigern, da der Key nicht ausreichend geschützt ist. Das Port-Forwarding über die SSH-Verbindung zum ESSE-Institut
-sollte nun noch vorhanden sein. Da wir ja über den Port 2222 direkt auf den Tomcat-Server zugreifen können, ist es nun
-möglich sich mittels 'ssh -p 2222 walter@localhost' mit dem Benutzer 'walter' einzuloggen. Dies funktioniert aus folgendem
-Grund:\linebreak
-Der Server speichert (im .ssh-Ordner) zusätzlich noch den Public-Key jedes Users. Wird nun eine Verbindung angefordert,
-so muss der User, der dies durchführt, einen Private-Key in seinem .ssh-Ordner besitzen, der zu einem Public-Key am Server passt.
-Wir haben uns den Private-Key von 'walter' in unseren eigenen .ssh-Ordner kopiert und der Server glaubt nun, wir seien
-auch dieser User. 
+\include{lab1c}
 
 \section{Ueberschrift 2}
 
