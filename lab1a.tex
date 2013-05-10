@@ -14,10 +14,10 @@ Den Zugang zum Tomcat-Server erhält man sehr leicht - zumindest unter Linux. Al
 durchgeführt. Für den Zugang ist es notwendig, sich via SSH auf den ESSE-Server zu verbinden, allerdings mit Port Forwarding
 auf den angegebenen Tomcat-Server:
 
-ssh -p 12345 MATRNR@sela.inso.tuwien.ac.at -L 2222:192.168.20.100:20
+ssh -p 12345 MATRNR@sela.inso.tuwien.ac.at -L 8000:192.168.20.100:8000
 
-Dies hat zur Folge, dass der Port 2222 nun auf den Port des Tomcat-Servers geforwarded wird und es somit ein leichtes
-ist mittels http://localhost:2222 die Homepage auf dem Server einzusehen.
+Dies hat zur Folge, dass der Port 8000 nun auf den Port des Tomcat-Servers geforwarded wird und es somit ein leichtes
+ist mittels http://localhost:8000 die Homepage auf dem Server einzusehen.
 
 \subsection{Walter's Private Key}
 Nun war es die Aufgabe sich einen SSH-Zugang mit dem User 'walter' zu verschaffen. Hierfür gibt es 2 Möglichkeiten, sich
@@ -64,8 +64,26 @@ auch dieser User.
 In diesem Abschnitt wollen wir besprechen, welche Fehler zu den genannten Sicherheitslücken geführt haben, und wie sie behoben werden können. Es handelt sich um drei mehr oder weniger unabhängige Fehler, wobei schon das Beheben eines einzigen dieser Fehler das Eindringen erheblich erschweren würde.
 
 \subsubsection{Veraltete Tomcat-Version}
+Die verwendete Version des Tomcat-Servers (6.0.16) hat offentsichtlich eine Sicherheitslücke, die den Zugriff auf Dateien erlaubt, die außerhalb der Ordners für Web-Dokumente auf dem Server liegen. Ein Update auf eine aktuelle(re) Version des Servers hätte diese Lücke geschlosse und hätte verhindert, dass über den Webserver auf beliebige User-Daten - wie z. B. Walters privaten SSH-Schlüssel - zugegriffen werden kann.
 
 \subsubsection{Privater SSH-Key auf dem Server}
+Die Bezeichnung "privater Schlüssel" hätte für Walter ein ausreichender Hinweis sein müssen, um diesen privaten Schlüssel an einem \emph{privaten} Ort abzulegen. Ein über das Internet zugänglicher Server ist nicht so ein privater Ort. Darüberhinaus ist es nicht nur gefährlich, sondern auch sinnlos, den privaten Schlüssel auf jenem Rechner aufzubewahren, für den er den Zugang ermöglicht.
+Walter hätte also nur eine Kopie seines öffentlichen Schlüssels (in der Datei \url{~/.ssh/authorized_keys}) auf dem Server belassen sollen. Den privaten Schlüssel hätte er vom Server löschen müssen und ihn \emph{nur auf dem Rechner, von dem aus er Zugriff auf den Server haben möchte}, aufbewahren sollen.
 
 \subsubsection{Privater SSH-Key nicht passwortgeschützt}
+Die vorherigen beiden Sicherheitslücken wären noch längst nicht so gravierend ausgefallen, hätte Walter seinen Schlüssel wenigestens durch ein ausreichend starkes Passwort geschützt. Stattdessen verwendete der Schlüssel die sogenannte "empty passphrase", also gar kein Passwort, wie ein kurzer Angriff mit dem Tool phrasendrescher verriet:
+
+\begin{lstlisting}
+david@brazos:~/lab1$ phrasendrescher -i 8 id_rsa
+phrasen|drescher 1.0 - the passphrase cracker
+Copyright (C) 2007 Nico Leidecker; nfl@portcullis-security.com
+
+match: (0) id_rsa {empty passphrase}
+finished!
+bye, bye...
+\end{lstlisting}
+
+Walter hätte also ein ausreichend starkes Passwort - oder eben besser gleich eine Passphrase - wählen sollen, um seinen Schlüssel zu schützen. Dann hätte selbst ein Angreifer, der beide anderen Sicherheitslücken ausnützen konnte, den Schlüssel nicht verwenden können.
+
+Letztlich war der Angriff also nur durch das Zusammenspiel von 3 einzelnen Sicherheitslücken möglich.
 
