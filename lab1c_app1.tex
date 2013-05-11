@@ -1,1 +1,32 @@
-\section{App1}
+\section{App1 - Blog in Java mit JSP}
+
+\subsection{Vulnerability: Cross-Site Scripting}
+
+Das Blog ist anfällig für Cross-Site Scripting. Das Problem liegt darin, dass die Eingabedaten beim Erzeugen eines neuen Blog-Eintrags nur unzureichend gefiltert werden. Beim erneuten Anzeigen eines betroffenen Blog-Eintrags werden diese - potentiell gefährlichen - Daten dann an den Browsers gesendet und dort ausgeführt. 
+
+Ein konkretes Beispiel für einen Angriff: Der Angreifer "evil\_häcker" legt einen neuen Blog-Eintrag an. Im Formular auf newPost.html gibt er als Benutzernamen - wahrheitsgemäß - "evil\_häcker" ein. Als Text des Blog-Eintrags wählt er (MUSS ICH NOCH EINFÜGEN).
+
+Im Servlet, das den Post-Request entgegen nimmt (gui.controller.BlogServlet) wird die Eingabe zwar validiert, bevor sie in die (In-Memory-)Datenbank geschrieben wird. Leider ist der verwendete Validator (gui.helper.ScriptTagValidator) nicht ausreichend. Die verwendete Regulary Expression matcht nur Script-Tags, die keine Attribute zwischen dem Wort "script" und der schließenden Spitz-Klammer enthalten. Durch die Angabe "src="NOCH EINFÜGEN"" lässt sich der Validator also in die Irre führen und lässt die Eingabe ungefiltert durch.
+
+Da bei der Ausgabe der Blog-Einträge die Inhalte überhaupt nicht mehr gefiltert werden, wird also der folgende Text als Blog-Eintrag wieder ausgegeben (z. B. in archive.jsp). Im Browser wird das Script-Tag dann so behandelt, als würde es aus vertrauenswürdiger Quelle kommen: Das Script von der angegebenen URL wird heruntergeladenen und ausgeführt. Im konkreten Fall wird dadurch an der Stelle, an der sich das Script-Tag befand der Text "This is the evil script" ausgegeben.
+
+Der Vollständigkeit halber soll darauf hinwiesen werden, wenn der Angreifer das Script-Tag als Autoren-Namen und nicht als Blog-Text eingegeben hätte, da diese beiden Werte auf exakt dieselbe Art behandelt werden.
+
+\subsection{Lösung: Escapen beim erneuten Anzeigen}
+
+Die beste Lösung, um Cross-Site Scripting in diesem konkreten Fall vorzubeugen, liegt darin, die Blog-Daten (Autoren und Inhalte) bei der erneuten Ausgabe zu filtern. Dabei werden potentiell gefährliche Zeichen wie < und > durch entsprechende Escape-Sequenzen ersetzt, der Angriffs-Text aus dem Beispiel wird dadurch zu: ...
+
+Im Browser werden diese Escape-Sequenzen dann durch die entsprechenden Zeichen ersetzt und am Bildschirm ausgegeben. Im Unterschied zum nicht gefilterten Text wird das Script-Tag allerdings \emph{nicht ausgeführt} - der Browser behandelt es als ganz normalen Text.
+
+Eine kurze Recherche im Internet zeigt, dass Varialben-Werte in Servlet-Tags in JSP generell nicht gefiltert/escaped werden. Im Gegensatz dazu werden Variablen-Werte in Expression Language-Tags in JSP (per Default) \emph{immer} escaped. Um die Ausgabe-Werte zu escapen ist es also lediglich notwendig, die entsprechenden Servlet-Abschnitte durch Expression Language zu ersetzen, genauer gesagt durch c:forEach für den Schleifen-Durchgang (ist das überhaupt notwendig?) und durch c:out für die eigentliche Ausgabe. Das Tag c:out führt dann das eigentlich Escapen durch.
+
+Die beiden folgenden Code-Beispiele zeigen die Änderungen am Beispiel von archive.jsp. Das erste Beispiel zeigt die anfällige Variante, das zweite Beispiel die verbesserte Version.
+
+EINFÜGEN
+
+Man beachte, dass zwei weitere Veränderungen notwendig sind, um die EL-Tags verwenden zu können.
+\begin{enumerate}
+\item In der betreffenden JSP-Datei muss das Tag-Libary durch eine entsprechende taglib-Direktive deklariert werden. 
+\item Da Tomcat nicht mit den Archiven der Java Standard Tag Library ausgeliefert wird, müssen diese heruntergeladen und im Verzeichnis WEB-INF/lib abgelegt werden.
+\end{enumerate}
+
