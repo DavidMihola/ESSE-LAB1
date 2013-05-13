@@ -14,9 +14,13 @@ Auf dem Webspace von \emph{evil\_hacker} liegt unter der URL \url{SRC=http://web
 document.write('This is the evil script!')
 \end{lstlisting}
 
-Da bei der Ausgabe der Blog-Einträge die Inhalte überhaupt nicht mehr gefiltert werden, wird also der folgende Text als Blog-Eintrag wieder ausgegeben (z. B. in archive.jsp). Im Browser wird das Script-Tag dann so behandelt, als würde es aus vertrauenswürdiger Quelle kommen: Das Script von der angegebenen URL wird heruntergeladenen und ausgeführt. Im konkreten Fall wird dadurch an der Stelle, an der sich das Script-Tag befand der Text "This is the evil script" ausgegeben.
+Da bei der Ausgabe der Blog-Einträge die Inhalte überhaupt nicht mehr gefiltert werden, wird also der folgende Text als Blog-Eintrag wieder ausgegeben (z. B. in archive.jsp). Im Browser wird das Script-Tag dann so behandelt, als würde es aus vertrauenswürdiger Quelle kommen: Das Script von der angegebenen URL wird heruntergeladenen und ausgeführt. Im konkreten Fall wird dadurch an der Stelle, an der sich das Script-Tag befand der Text "This is the evil script" ausgegeben. (Der Vollständigkeit halber soll darauf hinwiesen werden, dass der Angriff auch funktionieren würde, wenn der Angreifer das Script-Tag als Autoren-Namen und nicht als Blog-Text eingegeben hätte, da diese beiden Werte auf exakt dieselbe Art behandelt werden.)
 
-Der Vollständigkeit halber soll darauf hinwiesen werden, dass der Angriff auch funktionieren würde, wenn der Angreifer das Script-Tag als Autoren-Namen und nicht als Blog-Text eingegeben hätte, da diese beiden Werte auf exakt dieselbe Art behandelt werden.
+Im vorliegenden Fall handelt es sich natürlich nur um einen harmlosen "Spass" - schließlich hätte der Angreifer ja auch gleich "This is the evil script" als Blog-Text eintragen können. Und da das Blog über nur einen sehr eingeschränkten Funktionsumfang verfügt, gibt es auch nicht viel zu zerstören oder auszuspionieren. Lediglich die Session-ID, welche in einem Cookie abgespeichert wird, stellt ein mögliches Ziel für tatsächlich gefährliche Angriffe dar.
+
+Ein entsprechendes JavaScript könnte diese SessionID auslesen und an den Server des Angreifers übermitteln - dieser hätte dann über die SessionID Zugriff auf die Session des Opfers. Die Website könnte dann nicht mehr zwischen dem Opfer und dem Angreifer unterscheiden und der Angreifer hätte Zugriff auf eventuell gespeicherte private Daten des Opfers, etc.
+
+Allerdings ist die SessionID im Cookie als "HttpOnly" gekennzeichnet. Dies ist ein Hinweis für den Browser, dass dieser Wert einem clientseitigen Script nicht zugänglich gemacht werden darf. Moderne Browser verstehen diese Hinweis und schützen daher die SessionID vor dem oben beschriebenen Session Hijacking-Angriff. Verwendet der User allerdings einen älteren Browser, ist es denkbar, dass dieser den Hinweis "HttpOnly" nicht versteht und daher die SessionID einem Script zugänglich macht. Ein Session Hijacking wäre damit also denkbar.
 
 \subsection{Lösung: Escapen beim erneuten Anzeigen}
 
@@ -58,7 +62,6 @@ Die beiden folgenden Code-Beispiele zeigen die Änderungen am Beispiel von \url{
 
 \begin{lstlisting}
 <jsp:useBean id="bean" class="gui.model.SearchResultBean" scope="session"/>
-<%@ page isELIgnored="false" %>
 <%@ page import="gui.model.PostBean"%>
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
     pageEncoding="ISO-8859-1"%>
@@ -90,4 +93,8 @@ Man beachte, dass zwei weitere Veränderungen notwendig sind, um die EL-Tags ver
 \item In der betreffenden JSP-Datei muss das Tag-Libary durch eine entsprechende taglib-Direktive deklariert werden. 
 \item Da Tomcat nicht mit den Archiven der Java Standard Tag Library ausgeliefert wird, müssen diese heruntergeladen und im Verzeichnis WEB-INF/lib abgelegt werden.
 \end{enumerate}
+
+Nicht nur \url{archive.jsp} war in der ursprünglichen Version anfällig für das Cross-Site Scripting. Auf ähnliche Weise mussten auch die Tags in \url{index.jps}, \url{post.jsp} und \url{searchResults.jsp} angepasst werden.
+
+
 
