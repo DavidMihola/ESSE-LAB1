@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
 	pageEncoding="ISO-8859-1"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>	
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 
 <jsp:useBean id="index" class="gui.model.IndexBean" scope="session" />
@@ -21,11 +22,10 @@
 		<li><a href="blog/archive">All Posts</a></li>
 	</ul>
 	<div id="lastPost">
-		<h3><%=index.getPost().getAuthor()%></h3>
+		<h3><c:out value="${sessionScope.index.post.author}"/></h3>
 		<div>
-			<%=index.getPost().getContent()%></div>
-
-
+			<c:out value="${sessionScope.index.post.content}"/>
+		</div>
 	</div>
 </body>
 </html>
