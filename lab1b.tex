@@ -98,9 +98,40 @@ Host kerberos.extra.atlanta.essecorp.invalid (fdcb:c447:e9d2:3553:1003::da) is u
 \end{lstlisting}
 
 \subsection{Port-Scans}
+Als nächstes scannten wir alle gefundenen Hosts auf offene Ports und laufende Services.
+Nachfolgend werden die gefundenen IP-Adressen und ihre zugehörigen offenen Ports sowie Services aufgelistet:
+TCP IPv4 Scans:
+\begin{lstlisting}
+192.168.98.10 Port 53 domain dnsmasq 2.55
+192.168.98.28 Port 25 SMTP
+192.168.98.54 Port 1080 socks5 (Username/password authentication required)
+192.168.98.99 Port 631 ipp cups 1.4 (Printserver Apple)
+192.168.98.124 Port 8000 Apache Tomcat/Coyote JSP engine 1.1
+192.168.98.124 Port 8009 ajp13 Apache Server, Service Info: OS: Linux 
+192.168.98.124 Port 22 OpenSSH 5.5p1 Debian 6+sqeueeze3 (Protocol 2.0), OS: Linux
+192.168.98.201 Port 139 und 445 (Printserver smb mit und ohne netbios) netbios-ssn Samba smbd 3.X (workgroup: ESSECORP)
+172.16.2.12 http lighttpd 1.4.28 dmz
+172.16.2.15 Port 21 FTP vsftpd 2.3.2 dmz
+172.16.2.25 Port 25 SMTP dmz
 
-Als nächstes scannten wir alle gefundenen Hosts auf offene Ports.
+\end{lstlisting}
 
-TODO: Ergebnisse einfügen
+IPv6 Scans:
+\begin{lstlisting}
+athena.extra.atlanta.essecorp.invalid:
+Port 80 - http ligthttpd
+Port 443 - ssl/http lighttpd
+lighthttpd ist ein kleiner Webserver, der Perl, PHP, Python und Ruby unterstützt
+
+zeus.extra.atlanta.essecorp.invalid:
+Port 7 - echo
+Port 9 - discard?
+Port 13 - daytime
+Port 19 - chargen Linux
+Port 22 - ssh
+Port 37 - time?
+Dabei handelt es sich um einen sogenannten TCP/UDP-Small Server, der für Diagnosen
+verwendet wird
+\end{lstlisting}
 
 TODO: grafischer Netzwerkplan
