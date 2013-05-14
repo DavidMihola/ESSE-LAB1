@@ -37,7 +37,7 @@ Das Skript \url{steal_the_sessionID.php} kann dann die SessionID aus dem Cookie 
 
 Seit einigen Jahren existiert gegen diese Art des Angriffs eine Sicherheitsvorkehrung, die das Stehlen von Cookie-Daten verhindern soll. Beim Setzen des Cookies kann der Webserver diesen als "HttpOnly" kennzeichnen. Dies ist ein Hinweis für den Browser, dass dieser Wert einem clientseitigen Script nicht zugänglich gemacht werden darf. Moderne Browser verstehen diese Hinweis und schützen daher die SessionID vor dem oben beschriebenen Session Hijacking-Angriff.
 
-In der \url{README}-Datei unseres Java-Blogs wird behauptet, die Cookies wären als "HttpOnly" gekennzeichnet. Ein Blick in die Server-Konfigurations-Datei \url{web.xml} zeigt jedoch das Gegenteil. Diese Datei enthält unter anderem den folgenden Abschnitt:
+In der \url{README}-Datei unseres Java-Blogs wird behauptet, die Cookies wären als "HttpOnly" gekennzeichnet. Ein Blick in die Server-Konfigurations-Datei \url{web.xml} scheint jedoch das Gegenteil zu zeigen. Diese Datei enthält unter anderem den folgenden Abschnitt:
 
 \begin{lstlisting}
 <session-config>
@@ -49,13 +49,13 @@ In der \url{README}-Datei unseres Java-Blogs wird behauptet, die Cookies wären 
 </session-config>
 \end{lstlisting}
 
-Ganz eindeutig sind die Cookies also nicht als HttpOnly gekennzeichnet. Im Rahmen eines Cross-Site Scriptings Angriffs wäre es dem Angreifer also möglich, den Cookie auszulesen und die SessionID zu stehlen.
+Weitere Internetrecherchen (z. B. unter \url{http://software-security.sans.org/blog/2010/08/11/security-misconfigurations-java-webxml-files}) zeigen jedoch, dass der ganze gezeigte Abschnitt in der Konfigurationsdatei eigentlich überflüssig ist: Tomcat 7 ist offenbar per Default so konfiguriert, dass alle Cookies HttpOnly sind. Tatsächlich kann diese serverweite Default-Konfiguration nicht einmal durch die Angaben in \url{web.xml} überschrieben werden. Der gezeigt Abschnitt scheint also - glücklicherweise - einfach wirkungslos zu sein. Lediglich in dem Fall, dass die serverweite Konfiguration HttpOnly ausschalten sollte, würden die Angaben in \url{web.xml} wirksam werden - in diesem Fall würde durch den gezeigten Abschnitt tatsächlich eine Sicherheitslücke geöffnet.
 
 Zusammenfassend konnten in diesem Blog-Programm also zwei Sicherheitslücken identifiziert werden:
 
 \begin{enumerate}
 \item Eine Anfälligkeit für Cross-Site Scripting
-\item Cookies sind nicht vor dem Zugriff durch clientseitige Skripts geschützt
+\item Die Konfiguration der Cookies ist widersprüchlich, für den Administrator verwirrend und enthält - je nach Server-Konfiguration - eine Sicherheitslücke
 \end{enumerate}
 
 Der folgende Abschnitt beschreibt Möglichkeiten, diese Sicherheitslücken zu schließen.
@@ -73,6 +73,8 @@ Der erste und einfachste Teil der Lösung besteht darin, die Cookies tatsächlic
 	</cookie-config>
 </session-config>
 \end{lstlisting}
+
+Dies würde die Cookies auch dann schützen, wenn die serverweite Konfiguration von Tomcat die Cookies standardmäßig auf nicht HttpOnly setzen sollte.
 
 Die Cookies so zu schützen ist sinnvoll, aber nicht ausreichend. Verwendet der User nämlich einen älteren Browser, ist es denkbar, dass dieser den Hinweis "HttpOnly" nicht versteht und daher die SessionID einem Script zugänglich macht. Ein Session Hijacking wäre damit also denkbar. Daher ist es notwendig, auch die Anfälligkeit gegen Cross-Site Scripting zu beheben.
 
