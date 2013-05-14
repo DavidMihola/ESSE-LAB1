@@ -113,7 +113,6 @@ TCP IPv4 Scans:
 172.16.2.12 http lighttpd 1.4.28 dmz
 172.16.2.15 Port 21 FTP vsftpd 2.3.2 dmz
 172.16.2.25 Port 25 SMTP dmz
-
 \end{lstlisting}
 
 IPv6 Scans:
@@ -130,8 +129,31 @@ Port 13 - daytime
 Port 19 - chargen Linux
 Port 22 - ssh
 Port 37 - time?
-Dabei handelt es sich um einen sogenannten TCP/UDP-Small Server, der für Diagnosen
-verwendet wird
 \end{lstlisting}
 
-TODO: grafischer Netzwerkplan
+Der Netzwerkplan zeigt wie das Netzwerk aufgebaut ist.
+
+\begin{figure}[h!]
+  \centering
+  \fbox{
+    \includegraphics[width=1\textwidth]{./imgs/Netzwerkplan.jpg}
+  }
+  \caption{Netzwerkplan}
+  \label{fig:netzwerkplan}
+\end{figure}
+
+Es fällt sofort auf, dass es 4 verschiedene große Domänen gibt, die jeweils eine andere Funktionalität verfolgen:
+\begin{enumerate}
+\item local.vienna.essegroup.invalid
+\item dmz.vienna.essegroup.invalid
+\item extra.atlanta.essegroup.invalid
+\item Hosts
+\end{enumerate}
+
+Die erste lokale Domäne beinhaltet einen typischen Proxy, der innerhalb des lokalen Netzwerkes arbeitet. Außerdem gibt es einen
+internen Mail-Server (SMTP), einen internen Tomcat mit SSH-Zugang, sowie den typischen DNS und 2 Druckerserver, die
+nur intern genutzt werden können.\linebreak
+Die DMZ (Demilitarisierte Zone) bietet Services an, auf die man auch aus dem Internet zugreifen kann. Somit existieren die
+3 Komponenten Mailserver, FTP- und SMTP-Server.\linebreak
+Die Komponenten TCP/UDP-Server, sowie ein kleiner Lightweight-HTTP-Webserver liegen hier in einer eigenen Domäne.\linebreak
+Die Host bekommen Adressen im Bereich von 10.12.0.1 bis 10.12.255.254.

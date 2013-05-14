@@ -1,1 +1,38 @@
 \section{App2}
+
+\subsection{Vulnerability: Weak Session IDs}
+
+Die (groesste) Schwachstelle des Programmes sind die schlecht generierten Session IDs. Durch diesen Fehler kann es einen Angreifer gelingen, die Kontrolle ueber eine Session zu erlangen und  unter dem Namen und mit den Rechten des angegriffenen in einem System etwas zu tun.\\\\
+In diesem Konkreten Beispiel wird die SessionID als md5-Hash von einer Kombination aus dem Anmeldezeitpunkt und dem Benutzernamen generiert. Auf der Startseite der Applikation kann jeder - auch jemand der nicht eingeloggt ist - die mommentan eingeloggten User, wie lange diese schon eingeloggt sind und die aktuelle Serverzeit einsehen. Mit diesen Informationen ist es moeglich, die SessionID zu berechnen. Die dauer, die ein Benutzer angemeldet ist wird zwar auf ganze Minuten gerundet, dadurch ergeben sich aber auch nur 60 moegliche Werte, die in einer Schleife durchprobiert werden koennen.\\
+Der Hash wird in der Zeile 87 in der Datei functions.php generiert.\\\\
+Behoben kann man den Fehler in dem man eine Form von Zufallsgenerator fuer das erstellen der IDs verwendet. PHP bietet zum Beispiel eine Funktion uniqid(), welche eine eindeutige id generiert. Wir haben so eine ID dem String zugefuegt, vom dem der md5 berechnet wird. Dadurch laesst sich die SessionID von oben genannten Exploit nicht ausnutzen.
+
+\subsection{Ausnutzen der Schwachstelle}
+
+Um die SessionID zu berechnen sind 3 Sachen notwendig:
+ \begin{itemize}
+    \item Benutzername
+    \item Zeit seit der letzten Anmeldung des Benutzers
+    \item aktuelle Serverzeit
+\end{itemize}
+Diese Informationen lassen sich alle von der Startseite (index.php) auslesen. Es gibt eine Liste mit den in der letzten Stunde angemeldeten Benutzern. Daraus lassen sich Punkt 1 und 2 der Liste auslesen. Ganz unten steht die Serverzeit. Schaut man sich den Quellcode der Seite an, steht die Serverzeit auch in der Form, in der wir Sie benoetigen als Kommentar (Ergebniss der time()-Funktion).\\\\
+Da wir nicht genau wissen, welche Sekunde sich der Benutzer angemeldet hat, sondern nur welche Minute muessen wir alle Moeglichkeiten ausprobieren. Pro Sekunde wird der entsprechende String generiert, gehasht und anschliessend wird geschaut, ob die Session vorhanden ist. In dem Skript wird versucht, ein neues User-Objekt zu generieren. Ist dies erfolgreich, so liefert is\_logged\_in() wahr zurueck und wir wissen, dass die SessionID gueltig ist.\\\\
+Von extern funktioniert der Angriff aehnlich. index.php kann mit der GET-Variable s aufgerufen werden (?s=SESSIONID). Man muss einen HTTP-Request schicken und anschauen, wie das HTML im Response ausschaut. Mit einem Java-Programm (zum Beispiel) koennen sowohl zuerst die Informationen ausgelesen werden, dann die Anfragen generiert werden und anschliessend das HTML ausgewertet werden.
+
+\subsection{Korrekturen}
+
+Wie bereits oben erwaehnt habe ich den String, der mittels md5 zur SessionID wird um eine uniqeid() erweitert. Dadurch laesst sich nicht mehr von Benutzername und Anmeldezeitpunkt auf die SessionID schliessen.\\\\
+Das Programm enthielt auch weitere, jedoch nicht gleich gravierende Fehler.\\\\
+Erstens, wurde bei eingabe eines ungueltigen Benutzernamens die Fehlermeldung "username does not exist" ausgegebeb. Existierte der Benutzername und das Passwort war falsch, wurde "wrong password" ausgegeben. Dadurch kann ein Angreifer an Benutzernamen kommen, da er weiss, ob der Benutzername falsch ist oder nur das Passwort. Dies haben wir behoben, indem in beiden Faellen die selbe Meldung "username or password incorrect" ausgegeben wird.\\\\
+Um die Benutzernamen weiter zu schuetzen haben wir die Anzeige, welche Benutzer angemeldet waren in der letzten Stunde nur fuer angemeldete Benutzer sichtbar gemacht.\\
+Schlussendlich haben wir den Kommentar mit dem Ergebnis der time()-Funktion entfernt. Dieser laesst sich zwar aus der angezeigten Zeit ermitteln, stellt aber einen zusaetzlichen Aufwand dar.
+
+\subsection{Aktuelle Faelle}
+
+Ajaxterm ist ein webbasiertes Terminal. D.h. nur mit einem Webbrowser auf Clientseite kann man sich auf einem Rechner, auf dem Ajaxterm installiert ist, einloggen und wie in einer Shell auf ihm arbeiten. Dieses Programm hatte im Jahr 2011 eine Sicherheitsluecke, bei der schwacher SessionIDs ausgenutzt werden konnten. Dadurch konnten Sessions gehijackt werden bzw. eine DOS Attacke auf ein System ausgefuehrt werden, auf dem Ajaxterm installiert ist.\\
+Quelle: http://www.itsecdb.com/oval/definition/oval/org.mitre.oval/def/13633/DSA-1994-1-ajaxterm----weak-session-IDs.html
+
+
+\end{document}
+
+
