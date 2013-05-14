@@ -1,1 +1,20 @@
 \section{App0}
+Bei App0 handelt es sich um ein kleines C-Programm, dass nach einer Passwortabfrage, die überprüft wird zu einem kleinem Rechenprogramm weiterleitet. Stimmt das Passwort nicht mit dem gesuchten überein wird das Programm beendet. Das Passwort, so wie einige andere Character-Arrays (für Passwort *pwd), wurde Plain Text einfach in Variablen im Programm abgespeichert, die dann natürlich irgendwo, zur Laufzeit, am Stack liegen.\linebreak
+Stimmt das Passwort nun nicht überein, so wird die Eingabe nochmals in der Konsole ausgegeben:
+\begin{lstlisting}
+e1025484@pc389:~/My_Documents/Dokumente/ESSE-LAB1/Codebeispiele/app0/src-vuln/src$ ./sfv
+Passwort eingeben: 
+I don't know!
+I don't know!
+
+\end{lstlisting}
+Sieht man sich den Code an, so findet man schnell eine StringFormat-Vulnerability. Denn die Ausgabe des Passworts passiert nur mit einem simplen
+\begin{lstlisting}
+printf(input);
+\end{lstlisting}
+Wodurch man hier auch jegliche Speicheradressen angeben kann, um somit den Laufzeitspeicher + Stack gnadenlos zu durchwühlen. Dies ist möglich, indem man
+als Passwort z.B.:
+\begin{lstlisting}
+%d%x(%s)
+\end{lstlisting}
+eingibt. Bereits damit kann man auf eine Speicheradresse zugreifen, wo höchstwahrscheinlich eine String (bzw Char-Kette) aus dem laufenden Programm liegt. Ist der Speicherbereich leer bekommt man einen Segmentation Fault. 
