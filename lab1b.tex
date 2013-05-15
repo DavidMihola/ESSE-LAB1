@@ -33,7 +33,8 @@ ff00::/8                       ::                         U    256 0
 ::/0                           ::                         !n   -1  1246254 lo
 \end{lstlisting}
 
-Die direkt erreichbaren Netze sind daher: 192.168.20.0/24 und 192.168.98.0/24
+Die direkt erreichbaren Netze sind daher: 192.168.20.0/24 und 192.168.98.0/24.
+%David: Gehört fdcb:c447:e9d2:3553:1001::/120 nicht zu den direkt erreichbaren Netzen?
 
 \subsection{Ping-Scan}
 
@@ -64,7 +65,8 @@ walter@tomcat:~$ nmap -v -sP 10.12.0.0/24 | grep up
 Nmap done: 256 IP addresses (0 hosts up) scanned in 104.14 seconds
 \end{lstlisting}
 
-Da nmap beim Scan von IPv6-Adressen keine Adressebereiche unterstütz, mussten wir uns für diesen Teil der Aufgabe ein kleines Python-Skript schreiben, das die gewünschten Adressen erzeugt und dann für jede einzelne Adresse nmap aufruft.
+Da nmap beim Scan von IPv6-Adressen keine Adressbereiche unterstüzt, mussten wir uns für diesen Teil der Aufgabe ein kleines Python-Skript schreiben, das die gewünschten Adressen erzeugt und dann für jede einzelne Adresse nmap aufruft.
+
 Eine weitere Komplikation ergab sich, da wir auf dem Tomcat-Server keinerlei Schreibrechte hatten. Aus diesem Grund konnten wir weder das Skript selbst auf dem Server ablegen, noch den Output des Skripts in eine Datei auf dem Server schreiben, um sie später zur Analyse zur Verfügung zu haben. Um dies zu umgehen, ließen wir das Skript auf einem unserer Rechner lokal laufen und riefen im Skript nmap über ssh auf dem Server auf:
 
 \begin{lstlisting}
@@ -151,8 +153,11 @@ Es fällt sofort auf, dass es 4 verschiedene große Domänen gibt, die jeweils e
 
 Die erste lokale Domäne beinhaltet einen typischen Proxy, der innerhalb des lokalen Netzwerkes arbeitet. Außerdem gibt es einen
 internen Mail-Server (SMTP), einen internen Tomcat mit SSH-Zugang, sowie den typischen DNS und 2 Druckerserver, die
-nur intern genutzt werden können.\linebreak
+nur intern genutzt werden können.
+
 Die DMZ (Demilitarisierte Zone) bietet Services an, auf die man auch aus dem Internet zugreifen kann. Somit existieren die
-3 Komponenten Mailserver, FTP- und SMTP-Server.\linebreak
-Die Komponenten TCP/UDP-Server, sowie ein kleiner Lightweight-HTTP-Webserver liegen hier in einer eigenen Domäne.\linebreak
+3 Komponenten Mailserver, FTP- und SMTP-Server.
+
+Die Komponenten TCP/UDP-Server, sowie ein kleiner Lightweight-HTTP-Webserver liegen hier in einer eigenen Domäne.
+
 Die Host bekommen Adressen im Bereich von 10.12.0.1 bis 10.12.255.254.

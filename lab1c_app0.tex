@@ -1,6 +1,6 @@
 \section{App0}
 \subsection{Vulnerability: Format-String Vulnerability}
-Bei App0 handelt es sich um ein kleines C-Programm, dass nach einer Passwortabfrage, die überprüft wird zu einem kleinem Rechenprogramm weiterleitet. Stimmt das Passwort nicht mit dem gesuchten überein wird das Programm beendet. Das Passwort, so wie einige andere Character-Arrays (für Passwort *pwd), wurde Plain Text einfach in Variablen im Programm abgespeichert, die dann natürlich irgendwo, zur Laufzeit, am Stack liegen.\linebreak
+Bei App0 handelt es sich um ein kleines C-Programm, das nach einer Passwortabfrage, die überprüft wird, zu einem kleinen Rechenprogramm weiterleitet. Stimmt das Passwort nicht mit dem gesuchten überein, wird das Programm beendet. Das Passwort, so wie einige andere Character-Arrays (für Passwort *pwd), wurde als Plain Text einfach in Variablen im Programm abgespeichert, die dann natürlich irgendwo, zur Laufzeit, am Stack liegen.\linebreak
 Stimmt das Passwort nun nicht überein, so wird die Eingabe nochmals in der Konsole ausgegeben:
 \begin{lstlisting}
 e1025484@pc389:~/My_Documents/Dokumente/ESSE-LAB1/Codebeispiele/app0/src-vuln/src$ ./sfv
@@ -9,7 +9,7 @@ I don't know!
 I don't know!
 
 \end{lstlisting}
-Sieht man sich den Code an, so findet man schnell eine StringFormat-Vulnerability. Denn die Ausgabe des Passworts passiert vollkommen unformattiert.
+Sieht man sich den Code an, so findet man schnell eine StringFormat-Vulnerability. Denn die Ausgabe des Passworts passiert vollkommen unformatiert.
 \begin{lstlisting}
 if (strcmp(pwd, input) == 0) {
     return 1;
@@ -25,8 +25,8 @@ als Passwort z.B.:
 \begin{lstlisting}
 %d%x(%s)
 \end{lstlisting}
-eingibt. Bereits damit kann man auf eine Speicheradresse zugreifen, wo höchstwahrscheinlich ein String (bzw eine Char-Kette) aus dem laufenden Programm liegt.
-Ist der Speicherbereich leer bekommt man einen Segmentation Fault. Will man nun um einen Speicherbereich weiterspringen
+eingibt. Bereits damit kann man auf eine Speicheradresse zugreifen, wo höchstwahrscheinlich ein String (bzw. eine Char-Kette) aus dem laufenden Programm liegt.
+Ist der Speicherbereich leer, bekommt man einen Segmentation Fault. Will man nun um einen Speicherbereich weiterspringen
 und sehen, ob und was die nächste mögliche Adresse speichert, so sieht dies folgendermaßen aus:
 \begin{lstlisting}
 %d%d%x(%s)
@@ -102,7 +102,7 @@ Passwort eingeben:
 \end{lstlisting}
 Der Output ist natürlich systemabhängig und kann auf 32-bit Prozessoren ganz anders aussehen als auf 64-bit Prozessoren.
 Auch macht es einen Unterschied ob man Linux oder Linux-Emulatoren, wie das hier verwendete Cygwin, verwendet.
-Bekommt man keine Strings zurück gibt es entweder keine oder man sollte die Schleifendurchläufe erhöhen.
+Bekommt man keine Strings zurück, gibt es entweder keine oder man sollte die Schleifendurchläufe erhöhen.
 In diesem Durchlauf sind wir auf 2 Strings gestoßen, test und secret. Letztes ist dann auch das gesuchte Passwort, das
 im Quellcode Plain-Text als Zeichenkette gespeichert wurde.
 \subsection{Lösung des Problems}
